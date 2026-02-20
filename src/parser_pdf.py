@@ -3,9 +3,24 @@ import pandas as pd
 import re
 
 
-def converter_horas_para_decimal(hora_str):
-    horas, minutos = hora_str.split(":")
-    return round(int(horas) + int(minutos) / 60, 2)
+# ----------------------------------------
+# Regra contratual:
+# >=30 minutos sobe 1 hora
+# <30 minutos mantém a hora
+# ----------------------------------------
+def converter_horas_para_inteiro(hora_str):
+    try:
+        horas, minutos = hora_str.split(":")
+        horas = int(horas)
+        minutos = int(minutos)
+
+        if minutos >= 30:
+            return horas + 1
+        else:
+            return horas
+
+    except:
+        return 0  # segurança caso venha formato inesperado
 
 
 def extrair_dados_pdf(file):
@@ -15,7 +30,9 @@ def extrair_dados_pdf(file):
     with pdfplumber.open(file) as pdf:
         texto = ""
         for pagina in pdf.pages:
-            texto += pagina.extract_text() + "\n"
+            texto_extraido = pagina.extract_text()
+            if texto_extraido:
+                texto += texto_extraido + "\n"
 
     linhas = texto.split("\n")
 
@@ -53,7 +70,6 @@ def extrair_dados_pdf(file):
         elif linha.startswith("Tarefa:"):
             tarefa_bruta = linha.replace("Tarefa:", "").strip()
 
-            # Remove horas totais e valor final da tarefa
             tarefa_atual = re.sub(
                 r"\s\d{1,3}:\d{2}\s[\d\.,]+$",
                 "",
@@ -73,7 +89,9 @@ def extrair_dados_pdf(file):
 
                 nome = match.group(1).strip()
                 horas_str = match.group(2)
-                horas_decimal = converter_horas_para_decimal(horas_str)
+
+                # Aplicando regra contratual
+                horas_faturadas = converter_horas_para_inteiro(horas_str)
 
                 dados.append({
                     "competencia": competencia,
@@ -83,7 +101,7 @@ def extrair_dados_pdf(file):
                     "tarefa": tarefa_atual,
                     "colaborador": nome,
                     "horas_formatada": horas_str,
-                    "horas_decimal": horas_decimal
+                    "horas_faturadas": horas_faturadas
                 })
 
     df = pd.DataFrame(dados)
