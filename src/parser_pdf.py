@@ -19,7 +19,7 @@ def converter_horas_para_inteiro(hora_str):
         else:
             return horas
 
-    except:
+    except Exception:
         return 0  # segurança caso venha formato inesperado
 
 
@@ -90,7 +90,6 @@ def extrair_dados_pdf(file):
                 nome = match.group(1).strip()
                 horas_str = match.group(2)
 
-                # Aplicando regra contratual
                 horas_faturadas = converter_horas_para_inteiro(horas_str)
 
                 dados.append({
@@ -105,5 +104,13 @@ def extrair_dados_pdf(file):
                 })
 
     df = pd.DataFrame(dados)
+
+    # ----------------------------------------
+    # GARANTIA DEFINITIVA DE TIPO NUMÉRICO
+    # ----------------------------------------
+    df["horas_faturadas"] = pd.to_numeric(
+        df["horas_faturadas"],
+        errors="coerce"
+    ).fillna(0).astype(int)
 
     return df
