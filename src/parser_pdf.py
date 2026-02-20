@@ -19,14 +19,20 @@ def extrair_dados_pdf(file):
 
     linhas = texto.split("\n")
 
-    periodo_match = re.search(r"Período de (\d{2}/\d{2}/\d{4}) a (\d{2}/\d{2}/\d{4})", texto)
+    # -------------------------
+    # Extrair período
+    # -------------------------
+    periodo_match = re.search(
+        r"Período de (\d{2}/\d{2}/\d{4}) a (\d{2}/\d{2}/\d{4})",
+        texto
+    )
 
     if not periodo_match:
         raise ValueError("Período não encontrado no PDF.")
 
     periodo_inicio = periodo_match.group(1)
     periodo_fim = periodo_match.group(2)
-    competencia = periodo_inicio[3:10]
+    competencia = periodo_inicio[3:10]  # MM/YYYY
 
     projeto_atual = None
     tarefa_atual = None
@@ -35,17 +41,36 @@ def extrair_dados_pdf(file):
 
         linha = linha.strip()
 
+        # -------------------------
+        # Detectar Projeto
+        # -------------------------
         if linha.startswith("Projeto:"):
             projeto_atual = linha.replace("Projeto:", "").split("|")[0].strip()
 
+        # -------------------------
+        # Detectar Tarefa
+        # -------------------------
         elif linha.startswith("Tarefa:"):
             tarefa_bruta = linha.replace("Tarefa:", "").strip()
-            tarefa_atual = re.sub(r"\s\d{1,3}:\d{2}\s[\d\.,]+$", "", tarefa_bruta)
 
+            # Remove horas totais e valor final da tarefa
+            tarefa_atual = re.sub(
+                r"\s\d{1,3}:\d{2}\s[\d\.,]+$",
+                "",
+                tarefa_bruta
+            )
+
+        # -------------------------
+        # Detectar Colaboradores
+        # -------------------------
         else:
-            match = re.match(r"^([A-ZÁÉÍÓÚÃÕÂÊÔÇ\s]+)\s+(\d{1,3}:\d{2})\s+[\d\.,]+$", linha)
+            match = re.match(
+                r"^([A-ZÁÉÍÓÚÃÕÂÊÔÇ\s]+)\s+(\d{1,3}:\d{2})\s+[\d\.,]+$",
+                linha
+            )
 
             if match and projeto_atual and tarefa_atual:
+
                 nome = match.group(1).strip()
                 horas_str = match.group(2)
                 horas_decimal = converter_horas_para_decimal(horas_str)
@@ -57,8 +82,10 @@ def extrair_dados_pdf(file):
                     "projeto": projeto_atual,
                     "tarefa": tarefa_atual,
                     "colaborador": nome,
-                    "horas": horas_decimal
+                    "horas_formatada": horas_str,
+                    "horas_decimal": horas_decimal
                 })
 
     df = pd.DataFrame(dados)
+
     return df
